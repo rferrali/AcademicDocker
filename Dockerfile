@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM ubuntu:22.04
 
-ENV PATH="/root/.TinyTeX/bin/aarch64-linux:${PATH}"
+ARG TARGETARCH
+ENV PATH="/root/.TinyTeX/bin/current-arch:${PATH}"
 COPY install_scripts/install_apt.sh /install_scripts/
 RUN /install_scripts/install_apt.sh
 COPY install_scripts/install_R.sh /install_scripts/
