@@ -12,7 +12,7 @@ env:
 
 jobs:
   arm64:
-    runs-on: [arm64, ubuntu-latest] # Native ARM runner
+    runs-on: ubuntu-24.04-arm # Native ARM runner
     permissions:
       packages: write
     steps:
