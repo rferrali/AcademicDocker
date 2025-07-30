@@ -1,44 +1,92 @@
-name: Build Multi-Arch Docker Image
-
+name: Multi-Arch Docker Build
 on:
   push:
     branches: ["main"]
+    tags: ["v*"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/academic-docker # e.g., ghcr.io/your-username/repo
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  arm64:
+    runs-on: [arm64, ubuntu-latest] # Native ARM runner
     permissions:
-      contents: read
       packages: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Docker Buildx (supports multi-arch builds)
-      - name: Set up QEMU (for ARM emulation)
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
-
-      - name: Login to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build for both AMD64 and ARM64
-      - name: Build and push multi-arch image
+      - name: Build and push ARM64 image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64 # Target both architectures
+          platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/your-image-name:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
+            ${{ startsWith(github.ref, 'refs/tags/') && format('{0}/{1}:{2}-arm64', env.REGISTRY, env.IMAGE_NAME, github.ref_name) || '' }}
+
+  amd64:
+    runs-on: ubuntu-latest # Native AMD64 runner
+    needs: arm64 # Wait for ARM64 to finish first
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push AMD64 image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-amd64
+            ${{ startsWith(github.ref, 'refs/tags/') && format('{0}/{1}:{2}-amd64', env.REGISTRY, env.IMAGE_NAME, github.ref_name) || '' }}
+
+  manifest:
+    runs-on: ubuntu-latest
+    needs: [arm64, amd64] # Wait for both architectures
+    permissions:
+      packages: write
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push manifest
+        run: |
+          # Create unified manifest for 'latest'
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            --amend ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64 \
+            --amend ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+          # For version tags, create versioned manifest
+          if [[ "${{ github.event_name }}" == "push" && "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+            docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} \
+              --amend ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64 \
+              --amend ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64
+            docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          fi
