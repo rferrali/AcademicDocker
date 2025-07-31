@@ -1,6 +1,13 @@
 # syntax=docker/dockerfile:1
 FROM ubuntu:22.04
 
+# Add labels for better metadata
+LABEL org.opencontainers.image.title="Academic Docker"
+LABEL org.opencontainers.image.description="A Docker image for academic research with R, Quarto, and TinyTeX"
+LABEL org.opencontainers.image.source="https://github.com/rferrali/AcademicDocker"
+LABEL org.opencontainers.image.vendor="rferrali"
+LABEL org.opencontainers.image.licenses="MIT"
+
 ARG TARGETARCH
 ENV PATH="/home/vscode/.local/bin:${PATH}" \
     LANG=en_US.UTF-8 \
@@ -110,3 +117,12 @@ RUN pipx install radian && \
     # Install latexindent
     ~/.TinyTeX/bin/*/tlmgr install latexindent && \
     ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
+
+# Set working directory
+WORKDIR /workspace
+
+# Expose common ports for development
+EXPOSE 8787 3838 4321
+
+# Set the default command
+CMD ["/bin/zsh"]
