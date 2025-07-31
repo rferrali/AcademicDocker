@@ -2,14 +2,111 @@
 FROM ubuntu:22.04
 
 ARG TARGETARCH
-ENV PATH="/root/.TinyTeX/bin/current-arch:${PATH}"
-COPY install_scripts/install_apt.sh /install_scripts/
-RUN /install_scripts/install_apt.sh
-COPY install_scripts/install_R.sh /install_scripts/
-RUN /install_scripts/install_R.sh
-COPY install_scripts/install_tex.sh /install_scripts/
-RUN /install_scripts/install_tex.sh
-COPY install_scripts/install_utils.sh /install_scripts/
-RUN /install_scripts/install_utils.sh
-COPY tests /tests
-RUN /tests/test_R.sh
+ENV PATH="/home/vscode/.local/bin:${PATH}" \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    build-essential \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    software-properties-common \
+    wget \
+    perl \
+    libfontconfig1 \
+    libc6 \
+    libgcc1 \
+    libkrb5-3 \
+    libgssapi-krb5-2 \
+    libicu[0-9][0-9] \
+    liblttng-ust[0-9] \
+    libstdc++6 \
+    zlib1g \
+    locales \
+    sudo && \
+    # Create a non-root user with sudo privileges
+    groupadd -g 1001 vscode && \
+    useradd -m -u 1001 -g vscode vscode && \
+    usermod -aG sudo vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
+# Production stuff -----------------------------------
+# AS ROOT
+# Install rig
+RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg && \
+    sh -c 'echo "deb http://rig.r-pkg.org/deb rig main" > /etc/apt/sources.list.d/rig.list' && \
+    apt-get update && apt-get install -y r-rig && \ 
+    # Install Quarto
+    curl -LO https://quarto.org/download/latest/quarto-linux-$TARGETARCH.deb && \
+    apt-get install -y ./quarto-linux-$TARGETARCH.deb && \
+    rm quarto-linux-$TARGETARCH.deb
+# AS USER VSCODE
+# Install TinyTeX
+USER vscode
+RUN mkdir -p ~/.local/bin && \
+    curl -fsSL "https://yihui.org/tinytex/install-unx.sh" | sh && \
+    # Install R and R packages
+    rig add release && \
+    R -e "pak::pkg_install('renv')"
+# Development stuff -----------------------------------
+USER root
+# AS ROOT
+# Install system dev dependencies
+RUN apt-get install -y --no-install-recommends \
+    apt-utils \
+    gnupg2 \
+    dirmngr \
+    iproute2 \
+    procps \
+    lsof \
+    tree \
+    ca-certificates \
+    git \
+    htop \
+    pipx \
+    nano \
+    net-tools \
+    psmisc \
+    rsync \
+    unzip \
+    bzip2 \
+    xz-utils \
+    zip \
+    less \
+    jq \
+    lsb-release \
+    apt-transport-https \
+    dialog \
+    man-db \
+    manpages \
+    manpages-dev \
+    init-system-helpers \
+    cpanminus \
+    zsh && \
+    # Make zsh the default shell
+    chsh -s $(which zsh) && \
+    # Install starship prompt
+    curl -sS https://starship.rs/install.sh | sh -s -- --yes && \
+    # Install perl modules required by Latexindent
+    cpanm --notest YAML::Tiny File::HomeDir
+# AS USER
+USER vscode
+# Install R dev dependencies
+RUN pipx install radian && \
+    # Install terminal tools
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
+    echo 'eval "$(starship init zsh)"' >> ~/.zshrc && \
+    mkdir -p ~/.config && touch ~/.config/starship.toml && \
+    starship preset no-nerd-font -o ~/.config/starship.toml && \
+    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
+    sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' ~/.zshrc && \
+    # Install latexindent
+    ~/.TinyTeX/bin/*/tlmgr install latexindent && \
+    ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
