@@ -1,5 +1,13 @@
 # syntax=docker/dockerfile:1
-FROM ubuntu:22.04
+
+# Use different base images based on target architecture
+ARG TARGETARCH
+FROM ubuntu:22.04 AS base-arm64
+FROM dataeditors/stata19_5-mp:2025-05-21 AS base-amd64
+FROM base-${TARGETARCH} AS base
+
+# Set R version to install (pin specific version)
+ARG R_VERSION=4.5.1
 
 # Add labels for better metadata
 LABEL org.opencontainers.image.title="Academic Docker"
@@ -7,6 +15,8 @@ LABEL org.opencontainers.image.description="A Docker image for academic research
 LABEL org.opencontainers.image.source="https://github.com/rferrali/AcademicDocker"
 LABEL org.opencontainers.image.vendor="rferrali"
 LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.r-version="${R_VERSION}"
+LABEL org.opencontainers.image.stata-version="19.5-mp"
 
 ARG TARGETARCH
 ENV PATH="/home/vscode/.local/bin:${PATH}" \
@@ -15,8 +25,13 @@ ENV PATH="/home/vscode/.local/bin:${PATH}" \
     LC_ALL=en_US.UTF-8 \
     RENV_CONFIG_PAK_ENABLED=TRUE \
     RENV_PATHS_CACHE=/renv/cache
+
+# Ensure we start as root user
+USER root
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    chmod 755 /var/lib/apt/lists/partial && \
+    apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     build-essential \
@@ -70,8 +85,9 @@ RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg 
 USER vscode
 RUN mkdir -p ~/.local/bin && \
     curl -fsSL "https://yihui.org/tinytex/install-unx.sh" | sh && \
-    # Install R and R packages
-    rig add release && \
+    # Install specific R version and set as default
+    rig add ${R_VERSION} && \
+    rig default ${R_VERSION} && \
     R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex'))" && \
     R -e "tinytex:::install_yihui_pkgs()" && \ 
     ~/.TinyTeX/bin/*/tlmgr install cases \
@@ -94,7 +110,9 @@ USER root
 # Copy the startup scripts
 COPY startup_scripts /startup_scripts
 # Install system dev dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    chmod 755 /var/lib/apt/lists/partial && \
+    apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     gnupg2 \
     dirmngr \

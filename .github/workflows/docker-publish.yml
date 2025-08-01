@@ -9,6 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/academic-docker
+  R_VERSION: 4.5.1 # Pin the R version here
 
 jobs:
   metadata:
@@ -24,14 +25,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr,prefix=pr-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=r${{ env.R_VERSION }}
+            type=raw,value=r${{ env.R_VERSION }}-{{branch}},enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=r${{ env.R_VERSION }}-{{sha}},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-            type=sha,prefix=sha-,enable=${{ github.event_name == 'pull_request' }}
 
   build-amd64:
     runs-on: ubuntu-latest
@@ -65,6 +62,8 @@ jobs:
           labels: ${{ needs.metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            R_VERSION=${{ env.R_VERSION }}
 
       - name: Export digest
         if: github.event_name != 'pull_request'
@@ -114,6 +113,8 @@ jobs:
           labels: ${{ needs.metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            R_VERSION=${{ env.R_VERSION }}
 
       - name: Export digest
         if: github.event_name != 'pull_request'
