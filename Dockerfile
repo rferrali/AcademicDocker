@@ -3,7 +3,7 @@
 # Use different base images based on target architecture
 ARG TARGETARCH
 FROM ubuntu:22.04 AS base-arm64
-FROM dataeditors/stata19_5-mp AS base-amd64
+FROM dataeditors/stata19_5-mp:2025-05-21 AS base-amd64
 FROM base-${TARGETARCH} AS base
 
 # Set R version to install (pin specific version)
