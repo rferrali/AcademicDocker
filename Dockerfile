@@ -12,7 +12,8 @@ ARG TARGETARCH
 ENV PATH="/home/vscode/.local/bin:${PATH}" \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+    LC_ALL=en_US.UTF-8 \
+    RENV_CONFIG_PAK_ENABLED=TRUE
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -42,7 +43,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
     locale-gen en_US.UTF-8 && \
-    update-locale LANG=en_US.UTF-8
+    update-locale LANG=en_US.UTF-8 && \
+    # Clean up apt cache
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 # Production stuff -----------------------------------
 # AS ROOT
 # Install rig
@@ -52,7 +56,10 @@ RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg 
     # Install Quarto
     curl -LO https://quarto.org/download/latest/quarto-linux-$TARGETARCH.deb && \
     apt-get install -y ./quarto-linux-$TARGETARCH.deb && \
-    rm quarto-linux-$TARGETARCH.deb
+    rm quarto-linux-$TARGETARCH.deb && \
+    # Clean up apt cache
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 # AS USER VSCODE
 # Install TinyTeX
 USER vscode
@@ -60,10 +67,12 @@ RUN mkdir -p ~/.local/bin && \
     curl -fsSL "https://yihui.org/tinytex/install-unx.sh" | sh && \
     # Install R and R packages
     rig add release && \
-    R -e "pak::pkg_install('renv')"
+    R -e "pak::pkg_install(c('renv', 'rmarkdown'))"
 # Development stuff -----------------------------------
 USER root
 # AS ROOT
+# Copy the startup scripts
+COPY startup_scripts /
 # Install system dev dependencies
 RUN apt-get install -y --no-install-recommends \
     apt-utils \
@@ -99,11 +108,18 @@ RUN apt-get install -y --no-install-recommends \
     # Make zsh the default shell
     chsh -s $(which zsh) && \
     # Install perl modules required by Latexindent
-    cpanm --notest YAML::Tiny File::HomeDir
+    cpanm --notest YAML::Tiny File::HomeDir && \
+    # give to vscode user access to the startup scripts directory
+    chown -R vscode:vscode /startup_scripts && \
+    chmod -R 755 /startup_scripts && \
+    # Clean up apt cache
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 # AS USER
 USER vscode
 # Install R dev dependencies
 RUN pipx install radian && \
+    R -e "pak::pkg_install(c('languageserver', 'ManuelHentschel/vscDebugger', 'nx10/httpgd'))" && \
     # Install terminal tools
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
@@ -115,9 +131,6 @@ RUN pipx install radian && \
 
 # Set working directory
 WORKDIR /workspaces
-
-# Expose common ports for development
-EXPOSE 8787 3838 4321
 
 # Set the default command
 CMD ["/bin/zsh"]
