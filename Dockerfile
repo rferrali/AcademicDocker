@@ -77,7 +77,7 @@ RUN mkdir -p ~/.local/bin && \
 USER root
 # AS ROOT
 # Copy the startup scripts
-COPY startup_scripts /
+COPY startup_scripts /startup_scripts
 # Install system dev dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
