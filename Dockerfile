@@ -98,8 +98,6 @@ RUN apt-get install -y --no-install-recommends \
     zsh && \
     # Make zsh the default shell
     chsh -s $(which zsh) && \
-    # Install starship prompt
-    curl -sS https://starship.rs/install.sh | sh -s -- --yes && \
     # Install perl modules required by Latexindent
     cpanm --notest YAML::Tiny File::HomeDir
 # AS USER
@@ -108,9 +106,6 @@ USER vscode
 RUN pipx install radian && \
     # Install terminal tools
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
-    echo 'eval "$(starship init zsh)"' >> ~/.zshrc && \
-    mkdir -p ~/.config && touch ~/.config/starship.toml && \
-    starship preset no-nerd-font -o ~/.config/starship.toml && \
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
     sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' ~/.zshrc && \
@@ -119,7 +114,7 @@ RUN pipx install radian && \
     ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
 
 # Set working directory
-WORKDIR /workspace
+WORKDIR /workspaces
 
 # Expose common ports for development
 EXPOSE 8787 3838 4321
