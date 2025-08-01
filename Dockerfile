@@ -13,7 +13,8 @@ ENV PATH="/home/vscode/.local/bin:${PATH}" \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
-    RENV_CONFIG_PAK_ENABLED=TRUE
+    RENV_CONFIG_PAK_ENABLED=TRUE \
+    RENV_PATHS_CACHE=/renv/cache
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -57,6 +58,10 @@ RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg 
     curl -LO https://quarto.org/download/latest/quarto-linux-$TARGETARCH.deb && \
     apt-get install -y ./quarto-linux-$TARGETARCH.deb && \
     rm quarto-linux-$TARGETARCH.deb && \
+    # create directory for Renv cache and set permissions
+    mkdir -p /renv/cache && \
+    chown -R vscode:vscode /renv && \
+    chmod -R 755 /renv && \
     # Clean up apt cache
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -74,7 +79,7 @@ USER root
 # Copy the startup scripts
 COPY startup_scripts /
 # Install system dev dependencies
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     gnupg2 \
     dirmngr \
