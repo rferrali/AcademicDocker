@@ -72,7 +72,22 @@ RUN mkdir -p ~/.local/bin && \
     curl -fsSL "https://yihui.org/tinytex/install-unx.sh" | sh && \
     # Install R and R packages
     rig add release && \
-    R -e "pak::pkg_install(c('renv', 'rmarkdown'))"
+    R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex'))" && \
+    R -e "tinytex:::install_yihui_pkgs()" && \ 
+    ~/.TinyTeX/bin/*/tlmgr install cases \
+    economic \
+    codehigh \
+    collection-pictures \
+    tabularray \
+    moloch \
+    ninecolors \
+    relsize \
+    fira \
+    bbm \
+    datatool \
+    tracklang \
+    catchfile && \
+    ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
 # Development stuff -----------------------------------
 USER root
 # AS ROOT
@@ -129,10 +144,7 @@ RUN pipx install radian && \
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
-    sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' ~/.zshrc && \
-    # Install latexindent
-    ~/.TinyTeX/bin/*/tlmgr install latexindent && \
-    ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
+    sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' ~/.zshrc
 
 # Set working directory
 WORKDIR /workspaces
