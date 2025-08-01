@@ -25,8 +25,13 @@ ENV PATH="/home/vscode/.local/bin:${PATH}" \
     LC_ALL=en_US.UTF-8 \
     RENV_CONFIG_PAK_ENABLED=TRUE \
     RENV_PATHS_CACHE=/renv/cache
+
+# Ensure we start as root user
+USER root
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    chmod 755 /var/lib/apt/lists/partial && \
+    apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     build-essential \
@@ -105,7 +110,9 @@ USER root
 # Copy the startup scripts
 COPY startup_scripts /startup_scripts
 # Install system dev dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    chmod 755 /var/lib/apt/lists/partial && \
+    apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     gnupg2 \
     dirmngr \
