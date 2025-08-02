@@ -88,7 +88,7 @@ RUN mkdir -p ~/.local/bin && \
     # Install specific R version and set as default
     rig add ${R_VERSION} && \
     rig default ${R_VERSION} && \
-    R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex', 'testthat'))" && \
+    R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex'))" && \
     R -e "tinytex:::install_yihui_pkgs()" && \ 
     ~/.TinyTeX/bin/*/tlmgr install cases \
     economic \
@@ -157,7 +157,7 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
 USER vscode
 # Install R dev dependencies
 RUN pipx install radian && \
-    R -e "pak::pkg_install(c('languageserver', 'ManuelHentschel/vscDebugger', 'nx10/httpgd'))" && \
+    R -e "pak::pkg_install(c('languageserver', 'ManuelHentschel/vscDebugger', 'nx10/httpgd', 'testthat'))" && \
     # Install terminal tools
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
