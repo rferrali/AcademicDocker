@@ -6,8 +6,8 @@ FROM ubuntu:22.04 AS base-arm64
 FROM dataeditors/stata19_5-mp:2025-05-21 AS base-amd64
 FROM base-${TARGETARCH} AS base
 
-# Set R version to install (pin specific version)
-ARG R_VERSION=4.5.1
+# Set R version to install (will be passed from build args based on git tag)
+ARG R_VERSION
 
 # Add labels for better metadata
 LABEL org.opencontainers.image.title="Academic Docker"
@@ -88,7 +88,7 @@ RUN mkdir -p ~/.local/bin && \
     # Install specific R version and set as default
     rig add ${R_VERSION} && \
     rig default ${R_VERSION} && \
-    R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex'))" && \
+    R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex', 'testthat'))" && \
     R -e "tinytex:::install_yihui_pkgs()" && \ 
     ~/.TinyTeX/bin/*/tlmgr install cases \
     economic \

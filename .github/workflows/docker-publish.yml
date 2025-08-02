@@ -3,13 +3,11 @@ on:
   pull_request:
     branches: ["main"]
   push:
-    branches: ["main"]
     tags: ["v*"]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/academic-docker
-  R_VERSION: 4.5.1 # Pin the R version here
 
 jobs:
   metadata:
@@ -18,17 +16,32 @@ jobs:
       tags: ${{ steps.meta.outputs.tags }}
       labels: ${{ steps.meta.outputs.labels }}
       json: ${{ steps.meta.outputs.json }}
+      r-version: ${{ steps.extract-version.outputs.r-version }}
     steps:
+      - name: Extract R version from tag
+        id: extract-version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ startsWith(github.ref, 'refs/tags/v') }}" == "true" ]]; then
+            # Extract R version from tag (e.g., v4.5.1 -> 4.5.1)
+            R_VERSION=${GITHUB_REF#refs/tags/v}
+            echo "r-version=$R_VERSION" >> $GITHUB_OUTPUT
+            echo "R version from tag: $R_VERSION"
+          else
+            # For PR builds, use a default version (won't be pushed anyway)
+            echo "r-version=4.5.1" >> $GITHUB_OUTPUT
+            echo "Using default R version for build test"
+          fi
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=r${{ env.R_VERSION }}
-            type=raw,value=r${{ env.R_VERSION }}-{{branch}},enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=r${{ env.R_VERSION }}-{{sha}},enable=${{ github.event_name == 'pull_request' }}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=r${{ steps.extract-version.outputs.r-version }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=tag
+            type=ref,event=pr,prefix=pr-
 
   build-amd64:
     runs-on: ubuntu-latest
@@ -44,7 +57,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -57,23 +70,23 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
           tags: ${{ needs.metadata.outputs.tags }}
           labels: ${{ needs.metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            R_VERSION=${{ env.R_VERSION }}
+            R_VERSION=${{ needs.metadata.outputs.r-version }}
 
       - name: Export digest
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: digests-amd64
@@ -95,7 +108,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -108,23 +121,23 @@ jobs:
         with:
           context: .
           platforms: linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
           tags: ${{ needs.metadata.outputs.tags }}
           labels: ${{ needs.metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            R_VERSION=${{ env.R_VERSION }}
+            R_VERSION=${{ needs.metadata.outputs.r-version }}
 
       - name: Export digest
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: digests-arm64
@@ -134,7 +147,7 @@ jobs:
 
   merge:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - metadata
       - build-amd64
