@@ -50,7 +50,9 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
     liblttng-ust[0-9] \
     libstdc++6 \
     zlib1g \
+    libglpk-dev \
     locales \
+    pandoc \
     sudo && \
     # Create a non-root user with sudo privileges
     groupadd -g 1001 vscode && \
@@ -102,6 +104,7 @@ RUN mkdir -p ~/.local/bin && \
     bbm \
     datatool \
     tracklang \
+    harvard \
     catchfile && \
     ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
 # Development stuff -----------------------------------
