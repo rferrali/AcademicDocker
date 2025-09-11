@@ -8,7 +8,7 @@ FROM base-${TARGETARCH} AS base
 
 # Set R version to install (will be passed from build args based on git tag)
 ARG R_VERSION
-ARG TEX_SCHEME
+ARG TL_SCHEME
 
 # Add labels for better metadata
 LABEL org.opencontainers.image.title="Academic Docker"
@@ -87,7 +87,7 @@ RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg 
     curl -L -o install-tl-unx.tar.gz https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz && \
     zcat < install-tl-unx.tar.gz | tar xf - && \ 
     cd install-tl-* && \
-    perl ./install-tl --no-interaction --scheme=${TEX_SCHEME} && \
+    perl ./install-tl --no-interaction --scheme=${TL_SCHEME} && \
     ln -s /usr/local/texlive/$(ls /usr/local/texlive | head -n1)/bin/$(if [ \"$TARGETARCH\" = \"arm64\" ]; then echo aarch64-linux; else echo x86_64-linux; fi) /usr/local/texlive/bin && \
     rm -rf install-tl-*
 # AS USER VSCODE
