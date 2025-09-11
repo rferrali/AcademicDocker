@@ -8,6 +8,7 @@ FROM base-${TARGETARCH} AS base
 
 # Set R version to install (will be passed from build args based on git tag)
 ARG R_VERSION
+ARG TEX_SCHEME
 
 # Add labels for better metadata
 LABEL org.opencontainers.image.title="Academic Docker"
@@ -19,7 +20,7 @@ LABEL org.opencontainers.image.r-version="${R_VERSION}"
 LABEL org.opencontainers.image.stata-version="19.5-mp"
 
 ARG TARGETARCH
-ENV PATH="/home/vscode/.local/bin:${PATH}" \
+ENV PATH="/home/vscode/.local/bin:/usr/local/texlive/bin:${PATH}" \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
@@ -81,32 +82,21 @@ RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg 
     chmod -R 755 /renv && \
     # Clean up apt cache
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    # Install texlive-full
+    curl -L -o install-tl-unx.tar.gz https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz && \
+    zcat < install-tl-unx.tar.gz | tar xf - && \ 
+    cd install-tl-* && \
+    perl ./install-tl --no-interaction --scheme=${TEX_SCHEME} && \
+    ln -s /usr/local/texlive/$(ls /usr/local/texlive | head -n1)/bin/$(if [ \"$TARGETARCH\" = \"arm64\" ]; then echo aarch64-linux; else echo x86_64-linux; fi) /usr/local/texlive/bin && \
+    rm -rf install-tl-*
 # AS USER VSCODE
 # Install TinyTeX
 USER vscode
-RUN mkdir -p ~/.local/bin && \
-    curl -fsSL "https://yihui.org/tinytex/install-unx.sh" | sh && \
-    # Install specific R version and set as default
-    rig add ${R_VERSION} && \
+# Install specific R version and set as default
+RUN rig add ${R_VERSION} && \
     rig default ${R_VERSION} && \
-    R -e "pak::pkg_install(c('renv', 'rmarkdown', 'tinytex'))" && \
-    R -e "tinytex:::install_yihui_pkgs()" && \ 
-    ~/.TinyTeX/bin/*/tlmgr install cases \
-    economic \
-    codehigh \
-    collection-pictures \
-    tabularray \
-    moloch \
-    ninecolors \
-    relsize \
-    fira \
-    bbm \
-    datatool \
-    tracklang \
-    harvard \
-    catchfile && \
-    ln -s ~/.TinyTeX/bin/*/latexindent ~/bin/latexindent
+    R -e "pak::pkg_install(c('renv', 'rmarkdown'))"
 # Development stuff -----------------------------------
 USER root
 # AS ROOT
@@ -160,6 +150,7 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
 USER vscode
 # Install R dev dependencies
 RUN pipx install radian && \
+    pipx install cookiecutter && \
     R -e "pak::pkg_install(c('languageserver', 'ManuelHentschel/vscDebugger', 'nx10/httpgd', 'testthat'))" && \
     # Install terminal tools
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
@@ -169,6 +160,5 @@ RUN pipx install radian && \
 
 # Set working directory
 WORKDIR /workspaces
-
 # Set the default command
 CMD ["/bin/zsh"]
