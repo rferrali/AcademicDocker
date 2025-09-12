@@ -7,7 +7,7 @@ A comprehensive Docker image for academic research combining R, Stata, Quarto, a
 - **R Environment**: Latest R with rig package manager, renv for reproducible environments
 - **Statistical Software**: Stata 19.5 MP (AMD64 builds only)
 - **Document Generation**: Quarto for modern scientific publishing
-- **LaTeX Support**: TinyTeX with essential academic packages
+- **LaTeX Support**: full Texlive 2025 distribution
 - **Development Tools**: VS Code dev container ready with language servers and debugging
 - **Multi-Architecture**: Native builds for both AMD64 and ARM64
 
@@ -17,18 +17,12 @@ A comprehensive Docker image for academic research combining R, Stata, Quarto, a
 - **R**: Version-specific installation via rig
 - **Stata**: 19.5 MP (AMD64 only)
 - **Quarto**: Latest version for reproducible documents
-- **TinyTeX**: Lightweight LaTeX distribution with academic packages
+- **Texlive**: Complete LaTeX distribution
 
 ### R Packages
 - **Essential**: `renv`, `rmarkdown`, `tinytex`, 
 - **Development**: `languageserver`, `vscDebugger`, `httpgd`, `testthat`
 - **Data Science**: Ready for package installation via `pak`
-
-### LaTeX Packages
-Pre-installed academic packages including:
-- `cases`, `economic`, `codehigh`, `tabularray`
-- `moloch`, `fira`, `bbm`, `datatool`
-- Font packages and graphics collections
 
 ### Development Environment
 - **Shell**: Zsh with Oh My Zsh, autosuggestions, and syntax highlighting
@@ -51,7 +45,9 @@ To use Stata, ensure you are on an AMD64 architecture. You should also supply a 
 docker pull ghcr.io/rferrali/academic-docker:latest
 
 # Specific R version
-docker pull ghcr.io/rferrali/academic-docker:r4.5.1
+docker pull ghcr.io/rferrali/academic-docker:4.5.1
+docker pull ghcr.io/rferrali/academic-docker:4.5
+docker pull ghcr.io/rferrali/academic-docker:4
 ```
 
 ### Run Interactive Session
@@ -136,8 +132,7 @@ volumes:
 Images are tagged by R version and follow this pattern:
 
 - `latest` - Latest stable release
-- `r{version}` - Specific R version (e.g., `r4.5.1`)
-- `v{version}` - Git tag version (e.g., `v4.5.1`)
+- `{version}` - Specific R version (e.g., `4.5.1`)
 
 ### Current Versions
 - **R**: As specified in tag
@@ -151,12 +146,13 @@ Images are tagged by R version and follow this pattern:
 
 ```bash
 # Build for current architecture
-docker build -t academic-docker --build-arg R_VERSION=4.5.1 .
+docker build -t academic-docker --build-arg R_VERSION=4.5.1 --build-arg TL_SCHEME=scheme-full .
 
 # Build multi-architecture (requires Docker Buildx)
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   --build-arg R_VERSION=4.5.1 \
+  --build-arg TL_SCHEME=scheme-full \
   -t academic-docker .
 ```
 
