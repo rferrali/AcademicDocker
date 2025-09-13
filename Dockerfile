@@ -108,7 +108,6 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
     procps \
     lsof \
     tree \
-    ca-certificates \
     git \
     htop \
     pipx \
