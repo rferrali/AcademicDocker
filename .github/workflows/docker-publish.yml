@@ -1,4 +1,4 @@
-name: Multi-Arch Docker Build
+name: Build & Push Docker Image
 on:
   pull_request:
     branches: ["main"]
