@@ -3,7 +3,9 @@
 
 # Use latex base image
 ARG TARGETARCH
-FROM ghcr.io/rferrali/academic-docker-base:1.0.0 AS base
+FROM ghcr.io/rferrali/academic-docker-base:1.0.0-arm64 AS base-arm64
+FROM ghcr.io/rferrali/academic-docker-base:1.0.0-amd64 AS base-amd64
+FROM base-${TARGETARCH} AS base
 
 # Set R version to install (will be passed from build args based on git tag)
 ARG R_VERSION
