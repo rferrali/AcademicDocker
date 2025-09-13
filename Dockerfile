@@ -1,23 +1,24 @@
 # syntax=docker/dockerfile:1
 
-# Use different base images based on target architecture
+
+# Use latex base image
 ARG TARGETARCH
-FROM ubuntu:22.04 AS base-arm64
-FROM dataeditors/stata19_5-mp:2025-05-21 AS base-amd64
-FROM base-${TARGETARCH} AS base
+FROM ghcr.io/rferrali/academic-docker-base:1.0.0 AS base
 
 # Set R version to install (will be passed from build args based on git tag)
 ARG R_VERSION
-ARG TL_SCHEME
 
 # Add labels for better metadata
 LABEL org.opencontainers.image.title="Academic Docker"
-LABEL org.opencontainers.image.description="A Docker image for academic research with R, Quarto, and TinyTeX"
+LABEL org.opencontainers.image.description="A Docker image for academic research with R, Quarto, and Texlive"
 LABEL org.opencontainers.image.source="https://github.com/rferrali/AcademicDocker"
 LABEL org.opencontainers.image.vendor="rferrali"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.r-version="${R_VERSION}"
 LABEL org.opencontainers.image.stata-version="19.5-mp"
+LABEL org.opencontainers.image.ubuntu-version="22.04"
+LABEL org.opencontainers.image.texlive-version="2025"
+
 
 ARG TARGETARCH
 ENV PATH="/home/vscode/.local/bin:/usr/local/texlive/bin:${PATH}" \
@@ -53,25 +54,26 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
     zlib1g \
     libglpk-dev \
     locales \
-    pandoc \
     sudo && \
-    # Create a non-root user with sudo privileges
-    groupadd -g 1001 vscode && \
-    useradd -m -u 1001 -g vscode vscode && \
-    usermod -aG sudo vscode && \
-    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen en_US.UTF-8 && \
-    update-locale LANG=en_US.UTF-8 && \
     # Clean up apt cache
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Create a non-root user with sudo privileges
+RUN groupadd -g 1001 vscode && \
+    useradd -m -u 1001 -g vscode vscode && \
+    usermod -aG sudo vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Set locale
+RUN sed -i '/${LANG}/s/^# //g' /etc/locale.gen && \
+    locale-gen ${LANG} && \
+    update-locale LANG=${LANG}
+
 # Production stuff -----------------------------------
 # AS ROOT
 # Install rig
 RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg && \
     sh -c 'echo "deb http://rig.r-pkg.org/deb rig main" > /etc/apt/sources.list.d/rig.list' && \
-    apt-get update && apt-get install -y r-rig && \ 
+    apt-get update && apt-get install -y r-rig pandoc && \ 
     # Install Quarto
     curl -LO https://quarto.org/download/latest/quarto-linux-$TARGETARCH.deb && \
     apt-get install -y ./quarto-linux-$TARGETARCH.deb && \
@@ -82,14 +84,7 @@ RUN curl -L https://rig.r-pkg.org/deb/rig.gpg -o /etc/apt/trusted.gpg.d/rig.gpg 
     chmod -R 755 /renv && \
     # Clean up apt cache
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    # Install texlive-full
-    curl -L -o install-tl-unx.tar.gz https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz && \
-    zcat < install-tl-unx.tar.gz | tar xf - && \ 
-    cd install-tl-* && \
-    perl ./install-tl --no-interaction --scheme=${TL_SCHEME} && \
-    ln -s /usr/local/texlive/$(ls /usr/local/texlive | head -n1)/bin/$(if [ \"$TARGETARCH\" = \"arm64\" ]; then echo aarch64-linux; else echo x86_64-linux; fi) /usr/local/texlive/bin && \
-    rm -rf install-tl-*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 # AS USER VSCODE
 # Install TinyTeX
 USER vscode
