@@ -245,7 +245,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [Rocker Project](https://rocker-project.org/) - R Docker images
 - [Quarto](https://quarto.org/) - Scientific publishing system
-- [TinyTeX](https://yihui.org/tinytex/) - Lightweight LaTeX distribution
+- [Texlive](https://www.tug.org/texlive/) - LaTeX distribution
 - [rig](https://github.com/r-lib/rig) - R installation manager
 
 ---
