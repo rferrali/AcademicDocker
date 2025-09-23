@@ -61,10 +61,22 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 # Create a non-root user with sudo privileges
-RUN groupadd -g 1001 vscode && \
-    useradd -m -u 1001 -g vscode vscode && \
+# amd64 images come with a statauser user with uid 1000 and gid 1000 named stata 
+# We rename that user to vscode and change its home directory
+# arm64 images do not come with such a user, so we create it
+# This ensures that the vscode user always has uid 1000 and gid 100 
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+    usermod -l vscode statauser && \
+    groupmod -n vscode stata && \
+    usermod -d /home/vscode -m vscode && \
     usermod -aG sudo vscode && \
-    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers; \
+    else \
+    groupadd -g 1000 vscode && \
+    useradd -m -u 1000 -g vscode vscode && \
+    usermod -aG sudo vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers; \
+    fi;
 # Set locale
 RUN sed -i '/${LANG}/s/^# //g' /etc/locale.gen && \
     locale-gen ${LANG} && \
