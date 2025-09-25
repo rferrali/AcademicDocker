@@ -20,9 +20,11 @@ A comprehensive Docker image for academic research combining R, Stata, Quarto, a
 - **Texlive**: Complete LaTeX distribution
 
 ### R Packages
-- **Essential**: `renv`, `rmarkdown`, `tinytex`, 
-- **Development**: `languageserver`, `vscDebugger`, `httpgd`, `testthat`
-- **Data Science**: Ready for package installation via `pak`
+- **Essential**: `renv`, `tidyverse`, `rmarkdown`
+- **Publishing**: `modelsummary`
+- **Development**: `testthat`
+- **VSCode**: `languageserver`, `vscDebugger`, `httpgd`, `testthat`
+- Package installation via [pak](https://pak.r-lib.org/) for speed and reliability
 
 ### Development Environment
 - **Shell**: Zsh with Oh My Zsh, autosuggestions, and syntax highlighting
@@ -138,7 +140,7 @@ Images are tagged by R version and follow this pattern:
 - **R**: As specified in tag
 - **Stata**: 19.5 MP (AMD64 only)
 - **Quarto**: Latest available
-- **TinyTeX**: Latest available
+- **Texlive**: Latest available
 
 ## 🔧 Development
 
