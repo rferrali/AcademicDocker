@@ -159,7 +159,7 @@ USER vscode
 # Install R dev dependencies
 RUN pipx install radian && \
     pipx install cookiecutter && \
-    R -e "pak::pkg_install(c('languageserver', 'ManuelHentschel/vscDebugger', 'nx10/httpgd', 'testthat'))" && \
+    R -e "pak::pkg_install(c('tidyverse', 'modelsummary', 'rmarkdown', 'languageserver', 'ManuelHentschel/vscDebugger', 'nx10/httpgd', 'testthat'))" && \
     # Install terminal tools
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
