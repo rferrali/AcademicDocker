@@ -32,6 +32,9 @@
 #' @date September 2025
 
 cat("Checking installation of R development packages... ")
+if(!requireNamespace("desc", quietly = TRUE)) {
+  renv::install("desc")
+}
 library(desc)
 
 # Parse command line arguments
